@@ -71,7 +71,16 @@ Bureaucrat.start(
  writer: Bureaucrat.MarkdownWriter,
  default_path: "web/controllers/README.md",
  paths: [],
- env_var: "DOC"
+ env_var: "DOC",
+ controller_name_formatter: fn(name) -> 
+    name
+    |> String.split(".")
+    |> List.last
+  end,
+  action_name_formatter: fn(name, _controller) ->
+    name
+  end,
+  doc_name: "My Server API Version I"
 )
 ```
 
@@ -85,3 +94,8 @@ For example `[{YourApp.Api.V1, "web/controllers/api/v1/README.md"}]` will
 cause the docs for controllers under `YourApp.Api.V1` namespace to
 be written to `web/controllers/api/v1/README.md`.
 * `:env_var`: The environment variable used as a flag to trigger doc generation.
+* `controller_name_formatter`: Anonymous function to modify the controller name
+before outputting it as a string.
+* `action_name_formatter`: Anonymous function to modify the action name before
+outputting as a string.  May not receive controller name.
+* `doc_name`: String document name for title of document.

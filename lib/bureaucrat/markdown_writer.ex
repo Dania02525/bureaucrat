@@ -2,7 +2,7 @@ defmodule Bureaucrat.MarkdownWriter do
   def write(records, path) do
     {:ok, file} = File.open path, [:write, :utf8]
     records = group_records(records)
-    puts(file, "# API Documentation\n")
+    puts(file, "# #{document_name}\n")
     write_table_of_contents(records, file)
     Enum.each(records, fn {controller, records} ->
       write_controller(controller, records, file)
@@ -11,25 +11,26 @@ defmodule Bureaucrat.MarkdownWriter do
 
   defp write_table_of_contents(records, file) do
     Enum.each(records, fn {controller, actions} ->
-      anchor = to_anchor(controller)
-      puts(file, "* [#{controller}](##{anchor})")
+      anchor = to_anchor(format_controller_name(controller))
+      puts(file, "* [#{format_controller_name(controller)}](##{anchor})")
       Enum.each(actions, fn {action, _} ->
-        anchor = to_anchor("#{controller}.#{action}")
-        puts(file, "  * [#{action}](##{anchor})")
+        anchor = to_anchor("#{controller}#{format_action_name(action)}")
+        puts(file, "\s\s\s\s* [#{format_action_name(action)}](##{anchor})")
       end)
     end)
     puts(file, "")
   end
 
   defp write_controller(controller, records, file) do
-    puts(file, "## #{to_string(controller)}")
+    puts(file, "## #{format_controller_name(to_string(controller))}")
     Enum.each(records, fn {action, records} ->
       write_action(action, controller, records, file)
     end)
   end
 
   defp write_action(action, controller, records, file) do
-    puts(file, "### #{controller}.#{action}")
+    anchor = to_anchor("#{controller}#{action}")
+    puts(file, "### #{format_action_name(controller, action)} {##{anchor}}")
     Enum.each(records, &(write_example(&1, file)))
   end
 
@@ -130,5 +131,30 @@ defmodule Bureaucrat.MarkdownWriter do
     Enum.map(by_controller, fn {c, recs} ->
       {c, Enum.group_by(recs, &(&1.private.phoenix_action))}
     end)
+  end
+
+  defp document_name do
+    Application.get_env(:bureaucrat, :doc_name) || "API Documentation"
+  end
+
+  defp format_controller_name(controller) do
+    case Application.get_env(:bureaucrat, :controller_name_formatter) do
+      nil -> controller
+      format -> format.(controller)
+    end
+  end
+
+  defp format_action_name(controller, action) do
+    case Application.get_env(:bureaucrat, :action_name_formatter) do
+      nil -> action
+      format -> format.(action, controller)
+    end
+  end
+
+  defp format_action_name(action) do
+    case Application.get_env(:bureaucrat, :action_name_formatter) do
+      nil -> action
+      format -> format.(action, nil)
+    end
   end
 end
